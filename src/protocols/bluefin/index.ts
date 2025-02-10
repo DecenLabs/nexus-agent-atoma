@@ -1,34 +1,36 @@
-import { BluefinClient, Networks } from '@bluefin-exchange/bluefin-v2-client';
+import { BluefinClient, Networks, ORDER_SIDE, ORDER_TYPE, ORDER_STATUS } from '@bluefin-exchange/bluefin-v2-client';
 import { ProtocolConfig, TradeParams, MarketData, ProtocolResponse } from '../../@types/interface';
 
-// Updated interface definitions to match actual API response
-interface ExchangeInfoItem {
+// Define the ExchangeInfo interface based on the actual API response
+interface ExchangeInfo {
     symbol: string;
     lastPrice: string;
     volume24h: string;
+    marketPrice: string;
+    _24hrHighPrice: string;
+    _24hrLowPrice: string;
+    _24hrVolume: string;
+    _24hrPriceChangePercent: string;
 }
 
-interface ExchangeInfo {
-    data: ExchangeInfoItem[];
+interface BluefinResponse<T> {
+    data: T;
     ok: boolean;
     status: number;
     response: {
-        data: any;
-        message: any;
-        errorCode: any;
+        data: T;
+        message: string;
+        errorCode: number;
     };
 }
 
 interface OrderResponse {
     orderId: string;
-}
-
-interface OrderStatus {
-    // Add specific order status fields based on API response
     status: string;
-    filledQuantity: string;
-    remainingQuantity: string;
-    // ... other fields
+    symbol: string;
+    side: string;
+    price: string;
+    quantity: string;
 }
 
 export class BluefinProtocol {
@@ -54,74 +56,90 @@ export class BluefinProtocol {
     public async initialize(): Promise<void> {
         try {
             await this.client.init();
-        } catch (error: unknown) {
-            if (error instanceof Error) {
-                throw new Error(`Failed to initialize Bluefin client: ${error.message}`);
-            }
-            throw new Error('Failed to initialize Bluefin client: Unknown error');
+        } catch (error) {
+            throw new Error(`Failed to initialize Bluefin client: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
     public async getExchangeInfo(): Promise<ProtocolResponse<MarketData[]>> {
         try {
-            const response = await this.client.getExchangeInfo();
-            const exchangeInfo = response as unknown as ExchangeInfo;
-            
+            const response = await this.client.getExchangeInfo() as unknown as BluefinResponse<ExchangeInfo[]>;
             return {
                 success: true,
-                data: exchangeInfo.data.map((item: ExchangeInfoItem) => ({
+                data: response.data.map((item) => ({
                     symbol: item.symbol,
                     price: parseFloat(item.lastPrice),
                     volume: parseFloat(item.volume24h),
                     timestamp: Date.now()
                 }))
             };
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        } catch (error) {
             return {
                 success: false,
-                error: `Failed to fetch exchange info: ${errorMessage}`
+                error: `Failed to fetch exchange info: ${error instanceof Error ? error.message : 'Unknown error'}`
             };
         }
     }
 
     public async executeTrade(params: TradeParams): Promise<ProtocolResponse<string>> {
         try {
-            // Type assertion for client.createOrder
-            const order = await (this.client as any).createOrder({
+            const order = await this.client.postOrder({
                 symbol: params.symbol,
-                price: params.price.toString(),
-                quantity: params.quantity.toString(),
-                side: params.side,
-                orderType: 'LIMIT'
-            }) as OrderResponse;
+                price: Number(params.price),
+                quantity: Number(params.quantity),
+                side: params.side as ORDER_SIDE,
+                orderType: 'LIMIT' as ORDER_TYPE,
+                leverage: 1
+            });
 
             return {
                 success: true,
-                data: order.orderId
+                data: order.data.id.toString()
             };
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        } catch (error) {
             return {
                 success: false,
-                error: `Failed to execute trade: ${errorMessage}`
+                error: `Failed to execute trade: ${error instanceof Error ? error.message : 'Unknown error'}`
             };
         }
     }
 
-    public async getOrderStatus(orderId: string): Promise<ProtocolResponse<OrderStatus>> {
+    public async getOrderStatus(orderId: string): Promise<ProtocolResponse<OrderResponse>> {
         try {
-            // Type assertion for client.getOrder
-            const status = await (this.client as any).getOrder(orderId) as OrderStatus;
+            const response = await this.client.getUserOrders({
+                orderId : Number(orderId),
+                statuses: [
+                    ORDER_STATUS.OPEN,
+                    ORDER_STATUS.PARTIAL_FILLED,
+                    ORDER_STATUS.FILLED,
+                    ORDER_STATUS.CANCELLED,
+                    ORDER_STATUS.REJECTED
+                ]
+            });
+
+            if (!response.data || response.data.length === 0) {
+                return {
+                    success: false,
+                    error: `Order not found: ${orderId}`
+                };
+            }
+
+            const order = response.data[0];
             return {
                 success: true,
-                data: status
+                data: {
+                    orderId: order.id.toString(),
+                    status: order.orderStatus,
+                    symbol: order.symbol,
+                    side: order.side,
+                    price: order.price.toString(),
+                    quantity: order.quantity.toString()
+                }
             };
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        } catch (error) {
             return {
                 success: false,
-                error: `Failed to get order status: ${errorMessage}`
+                error: `Failed to get order status: ${error instanceof Error ? error.message : 'Unknown error'}`
             };
         }
     }

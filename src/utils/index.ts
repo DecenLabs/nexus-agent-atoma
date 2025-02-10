@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+// import { randomUUID } from 'crypto';
 import { AtomaSDK } from 'atoma-sdk';
 import Atoma from '../config/atoma';
 import Tools from './tools';
@@ -159,32 +159,18 @@ export function isError(error: unknown): error is Error {
   return error instanceof Error;
 }
 
-/**
- * Generic error handler that creates a structured error response
- */
-export function handleError(
-  error: unknown,
-  context: {
-    reasoning: string;
-    query: string;
-  },
-): StructuredError {
-  const errorId = randomUUID();
+interface ErrorHandlerParams {
+  reasoning: string;
+  query: string;
+}
 
-  let errorMessage: string;
-  if (isError(error)) {
-    errorMessage = error.message;
-  } else if (typeof error === 'string') {
-    errorMessage = error;
-  } else {
-    errorMessage = 'Unknown error occurred';
-  }
-
+export function handleError(error: unknown, params: ErrorHandlerParams) {
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
   return {
-    reasoning: context.reasoning,
-    response: 'Operation unsuccessful',
+    reasoning: params.reasoning,
+    response: errorMessage,
     status: 'failure',
-    query: context.query,
-    errors: [`Error ID: ${errorId} - ${errorMessage}`],
+    query: params.query,
+    errors: [errorMessage]
   };
 }

@@ -17,6 +17,9 @@ import {
   estimateGas,
 } from '../transactions/Transaction';
 import { Transaction } from '@mysten/sui/transactions';
+import { SuilendProtocol } from '../protocols/suilend';
+import { ProtocolConfig } from '../@types/interface';
+import { handleError } from '../utils';
 
 // Transaction wrapper functions
 export async function transferCoinWrapper(
@@ -200,4 +203,109 @@ export async function getStakeTransactionWrapper(
     BigInt(suiAmount),
     validatorAddress,
   );
+}
+
+export async function getLendingRatesWrapper(
+  ...args: (string | number | bigint | boolean)[]
+): Promise<string> {
+  try {
+    const [network, accountKey] = args as [string, string];
+    const config: ProtocolConfig = {
+      isTestnet: network === 'testnet',
+      accountKey
+    };
+
+    const protocol = SuilendProtocol.getInstance(config);
+    await protocol.initialize();
+    const rates = await protocol.getLendingRates();
+
+    return JSON.stringify([{
+      reasoning: 'Successfully retrieved lending rates',
+      response: JSON.stringify(rates.data, null, 2),
+      status: 'success',
+      query: 'Get lending rates',
+      errors: []
+    }]);
+  } catch (error) {
+    return JSON.stringify([
+      handleError(error, {
+        reasoning: 'Failed to get lending rates',
+        query: 'Get lending rates'
+      })
+    ]);
+  }
+}
+
+export async function lendTokensWrapper(
+  ...args: (string | number | bigint | boolean)[]
+): Promise<string> {
+  try {
+    const [network, accountKey, walletAddress, asset, amount] = args as [string, string, string, string, string];
+    const config: ProtocolConfig = {
+      isTestnet: network === 'testnet',
+      accountKey
+    };
+
+    const protocol = SuilendProtocol.getInstance(config);
+    await protocol.initialize();
+    const result = await protocol.lendTokens({
+      asset,
+      amount: BigInt(amount),
+      walletAddress
+    });
+
+    return JSON.stringify([{
+      reasoning: 'Successfully executed lending transaction',
+      response: JSON.stringify(result, null, 2),
+      status: 'success',
+      query: `Lend ${amount} of ${asset} from ${walletAddress}`,
+      errors: []
+    }]);
+  } catch (error) {
+    return JSON.stringify([
+      handleError(error, {
+        reasoning: 'Failed to lend tokens',
+        query: 'Lend tokens'
+      })
+    ]);
+  }
+}
+
+export async function borrowTokensWrapper(
+  ...args: (string | number | bigint | boolean)[]
+): Promise<string> {
+  try {
+    const [network, accountKey, walletAddress, obligationOwnerCapId, obligationId, asset, amount] = 
+      args as [string, string, string, string, string, string, string];
+    
+    const config: ProtocolConfig = {
+      isTestnet: network === 'testnet',
+      accountKey
+    };
+
+    const protocol = SuilendProtocol.getInstance(config);
+    await protocol.initialize();
+    const result = await protocol.borrowTokens({
+      asset,
+      amount: BigInt(amount),
+      walletAddress,
+      obligationOwnerCapId,
+      obligationId
+    });
+
+    return JSON.stringify([{
+      reasoning: 'Successfully executed borrowing transaction',
+      response: JSON.stringify(result, null, 2),
+      status: 'success',
+      query: `Borrow ${amount} of ${asset} to ${walletAddress}`,
+      errors: []
+    }]);
+  } catch (error) {
+    return JSON.stringify([
+      handleError(error, {
+        reasoning: 'Failed to borrow tokens',
+        query: 'Borrow tokens'
+      })
+    ]);
+  }
 }

@@ -1,3 +1,5 @@
+import { BigNumber } from "@bluefin-exchange/bluefin-v2-client";
+
 // Response interface for the intent agent's operations
 export interface IntentAgentResponse {
   success: boolean; // Indicates if the operation was successful
@@ -7,6 +9,40 @@ export interface IntentAgentResponse {
   additional_info_required: null | string[]; // List of additional information fields needed
   tool_arguments: (string | number | boolean | bigint)[]; // Arguments passed to the tool
 }
+
+export interface ParsedReserve {
+  // Basic info
+  coinType: string;
+  symbol: string;
+  
+  // Interest rates
+  supplyApy: BigNumber;        // Annual percentage yield for lenders
+  borrowApy: BigNumber;        // Annual percentage yield for borrowers
+  utilizationRate: BigNumber;  // Current utilization of the reserve
+  borrowInterestRate: BigNumber; // Current borrow interest rate
+  supplyInterestRate: BigNumber; // Current supply interest rate
+  
+  // Additional reserve info
+  totalSupply: BigNumber;      // Total supply in the reserve
+  totalBorrows: BigNumber;     // Total borrowed from the reserve
+  availableLiquidity: BigNumber; // Available liquidity for borrowing
+  price: BigNumber;            // Current price of the asset
+  
+  // Reserve configuration
+  ltv: BigNumber;              // Loan-to-Value ratio
+  liquidationThreshold: BigNumber; // Threshold for liquidation
+  liquidationPenalty: BigNumber;   // Penalty for liquidation
+}
+export interface LendingParams {
+  asset: string;
+  amount: bigint;
+  walletAddress: string;  // Added wallet address
+}
+
+export interface BorrowParams extends LendingParams {
+  obligationOwnerCapId: string;
+  obligationId: string;
+} 
 
 export type ToolArgument = string | number | boolean | bigint;
 
@@ -49,12 +85,6 @@ export interface TradeParams {
   quantity: number;
   price: number;
   side: 'BUY' | 'SELL';
-}
-
-export interface LendingParams {
-  asset: string;
-  amount: number;
-  duration?: number;
 }
 
 export interface MarketData {
@@ -256,4 +286,18 @@ export type { Liquidation };
 export interface ProtocolConfig {
     isTestnet: boolean;
     accountKey: string;
+}
+
+export interface MarketInfo {
+    supplyRate?: string;
+    borrowRate?: string;
+    utilization?: string;
+}
+
+// If duration is needed, we can add it to the original interface
+export interface LendingParams {
+    asset: string;
+    amount: bigint;
+    walletAddress: string;
+    duration?: number;  // Optional duration parameter
 }
