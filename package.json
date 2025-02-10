@@ -1,7 +1,7 @@
 {
-  "name": "@atoma-agents/sui-agent",
+  "name": "@0xshikhar/nexus-agents-atoma",
   "version": "1.0.0",
-  "private": true,
+  "private": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -13,7 +13,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "description": "",
   "dependencies": {
     "@bluefin-exchange/bluefin-v2-client": "^6.1.29",
