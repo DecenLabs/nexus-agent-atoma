@@ -1,6 +1,6 @@
-# Atoma Sage
+# Nexus Agent Package
 
-A specialized AI agent for interacting with the Sui blockchain and its protocols, with current support for Aftermath Finance operations.
+A specialized AI agent package for interacting with the Sui blockchain on top of the Atoma agent with support for Aftermath Finance operations, SuiLend, Navi and Bluefin.
 
 ## Features
 
